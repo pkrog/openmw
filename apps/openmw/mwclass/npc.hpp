@@ -172,6 +172,11 @@ namespace MWClass
         float getRunSpeed(const MWWorld::Ptr& ptr) const override;
 
         float getSwimSpeed(const MWWorld::Ptr& ptr) const override;
+
+        float getFlySpeed(const MWWorld::Ptr& ptr) const;
+
+    private:
+        float get_enc_speed_factor(const MWWorld::Ptr& ptr) const;
     };
 }
 

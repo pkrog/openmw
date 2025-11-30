@@ -911,6 +911,27 @@ namespace MWClass
         return ref->mBase->mScript;
     }
 
+    float Npc::get_enc_speed_factor(const MWWorld::Ptr& ptr) const {
+        const float normalizedEncumbrance = getNormalizedEncumbrance(ptr);
+//        const GMST& gmst = getGmst();
+//        value *= 1.0f - gmst.fEncumberedMoveEffect->mValue.getFloat() * normalizedEncumbrance;
+        return 1.5f / exp(normalizedEncumbrance);
+    }
+
+    float Npc::getFlySpeed(const MWWorld::Ptr& ptr) const {
+        const MWMechanics::NpcStats& stats = getNpcStats(ptr);
+        const MWMechanics::MagicEffects& mageffects = stats.getMagicEffects();
+        const GMST& gmst = getGmst();
+        float flySpeed = 0.01f
+            * (stats.getAttribute(ESM::Attribute::Speed).getModified()
+                + mageffects.getOrDefault(ESM::MagicEffect::Levitate).getMagnitude());
+        flySpeed = gmst.fMinFlySpeed->mValue.getFloat()
+            + flySpeed * (gmst.fMaxFlySpeed->mValue.getFloat() - gmst.fMinFlySpeed->mValue.getFloat());
+        flySpeed *= this->get_enc_speed_factor(ptr);
+        flySpeed = std::max(0.0f, flySpeed);
+        return flySpeed;
+    }
+
     float Npc::getMaxSpeed(const MWWorld::Ptr& ptr) const
     {
         // TODO: This function is called several times per frame for each NPC.
@@ -928,19 +949,10 @@ namespace MWClass
         const bool running = MWBase::Environment::get().getMechanicsManager()->isRunning(ptr);
 
         float moveSpeed;
-        if (normalizedEncumbrance > 1.0f)
-            moveSpeed = 0.0f;
-        else if (mageffects.getOrDefault(ESM::MagicEffect::Levitate).getMagnitude() > 0 && world->isLevitationEnabled())
-        {
-            float flySpeed = 0.01f
-                * (stats.getAttribute(ESM::Attribute::Speed).getModified()
-                    + mageffects.getOrDefault(ESM::MagicEffect::Levitate).getMagnitude());
-            flySpeed = gmst.fMinFlySpeed->mValue.getFloat()
-                + flySpeed * (gmst.fMaxFlySpeed->mValue.getFloat() - gmst.fMinFlySpeed->mValue.getFloat());
-            flySpeed *= 1.0f - gmst.fEncumberedMoveEffect->mValue.getFloat() * normalizedEncumbrance;
-            flySpeed = std::max(0.0f, flySpeed);
-            moveSpeed = flySpeed;
-        }
+//        if (normalizedEncumbrance > 1.0f)
+//            moveSpeed = 0.0f;
+        if (mageffects.getOrDefault(ESM::MagicEffect::Levitate).getMagnitude() > 0 && world->isLevitationEnabled())
+            moveSpeed = this->getFlySpeed(ptr);
         else if (world->isSwimming(ptr))
             moveSpeed = getSwimSpeed(ptr);
         else if (running && !MWBase::Environment::get().getMechanicsManager()->isSneaking(ptr))
@@ -1426,7 +1438,8 @@ namespace MWClass
         float walkSpeed = gmst.fMinWalkSpeed->mValue.getFloat()
             + 0.01f * stats.getAttribute(ESM::Attribute::Speed).getModified()
                 * (gmst.fMaxWalkSpeed->mValue.getFloat() - gmst.fMinWalkSpeed->mValue.getFloat());
-        walkSpeed *= 1.0f - gmst.fEncumberedMoveEffect->mValue.getFloat() * normalizedEncumbrance;
+//        walkSpeed *= 1.0f - gmst.fEncumberedMoveEffect->mValue.getFloat() * normalizedEncumbrance;
+        walkSpeed *= this->get_enc_speed_factor(ptr);
         walkSpeed = std::max(0.0f, walkSpeed);
         if (sneaking)
             walkSpeed *= gmst.fSneakSpeedMultiplier->mValue.getFloat();
