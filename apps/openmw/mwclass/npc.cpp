@@ -968,9 +968,7 @@ namespace MWClass
 
     float Npc::getJump(const MWWorld::Ptr& ptr) const
     {
-        const float normalizedEncumbrance = getNormalizedEncumbrance(ptr);
-        if (normalizedEncumbrance > 1.0f)
-            return 0.f;
+        const float esf = get_enc_speed_factor(ptr);
 
         const MWMechanics::NpcStats& stats = getNpcStats(ptr);
         if (stats.isParalyzed() || stats.getKnockedDown() || stats.isDead())
@@ -979,7 +977,7 @@ namespace MWClass
         const GMST& gmst = getGmst();
         const MWMechanics::MagicEffects& mageffects = stats.getMagicEffects();
         const float encumbranceTerm = gmst.fJumpEncumbranceBase->mValue.getFloat()
-            + gmst.fJumpEncumbranceMultiplier->mValue.getFloat() * (1.0f - normalizedEncumbrance);
+            + gmst.fJumpEncumbranceMultiplier->mValue.getFloat() * esf;
 
         float a = getSkill(ptr, ESM::Skill::Acrobatics);
         float b = 0.0f;
