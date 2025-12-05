@@ -2207,7 +2207,7 @@ namespace MWMechanics
                     factor = std::min(1.f, factor);
                     vec.x() *= factor;
                     vec.y() *= factor;
-                    vec.z() = 0.0f;
+                    vec.z() = - cls.getEncumbrance(mPtr) / 3.0f; // Gravity
                 }
                 // Started a jump.
                 else if (mJumpState != JumpState_InAir && vec.z() > 0.f)
