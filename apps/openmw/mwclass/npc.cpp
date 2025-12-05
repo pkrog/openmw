@@ -911,7 +911,7 @@ namespace MWClass
         return ref->mBase->mScript;
     }
 
-    float Npc::get_enc_speed_factor(const MWWorld::Ptr& ptr) const {
+    float Npc::get_enc_penalty_factor(const MWWorld::Ptr& ptr) const {
         const float normalizedEncumbrance = getNormalizedEncumbrance(ptr);
 //        const GMST& gmst = getGmst();
 //        value *= 1.0f - gmst.fEncumberedMoveEffect->mValue.getFloat() * normalizedEncumbrance;
@@ -927,7 +927,7 @@ namespace MWClass
                 + mageffects.getOrDefault(ESM::MagicEffect::Levitate).getMagnitude());
         flySpeed = gmst.fMinFlySpeed->mValue.getFloat()
             + flySpeed * (gmst.fMaxFlySpeed->mValue.getFloat() - gmst.fMinFlySpeed->mValue.getFloat());
-        flySpeed *= this->get_enc_speed_factor(ptr);
+        flySpeed *= this->get_enc_penalty_factor(ptr);
         flySpeed = std::max(0.0f, flySpeed);
         return flySpeed;
     }
@@ -968,7 +968,7 @@ namespace MWClass
 
     float Npc::getJump(const MWWorld::Ptr& ptr) const
     {
-        const float esf = get_enc_speed_factor(ptr);
+        const float esf = get_enc_penalty_factor(ptr);
 
         const MWMechanics::NpcStats& stats = getNpcStats(ptr);
         if (stats.isParalyzed() || stats.getKnockedDown() || stats.isDead())
@@ -1437,7 +1437,7 @@ namespace MWClass
             + 0.01f * stats.getAttribute(ESM::Attribute::Speed).getModified()
                 * (gmst.fMaxWalkSpeed->mValue.getFloat() - gmst.fMinWalkSpeed->mValue.getFloat());
 //        walkSpeed *= 1.0f - gmst.fEncumberedMoveEffect->mValue.getFloat() * normalizedEncumbrance;
-        walkSpeed *= this->get_enc_speed_factor(ptr);
+        walkSpeed *= this->get_enc_penalty_factor(ptr);
         walkSpeed = std::max(0.0f, walkSpeed);
         if (sneaking)
             walkSpeed *= gmst.fSneakSpeedMultiplier->mValue.getFloat();
