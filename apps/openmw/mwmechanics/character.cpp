@@ -2186,6 +2186,7 @@ namespace MWMechanics
             const float jumpHeight = cls.getJump(mPtr);
             if (jumpHeight <= 0.f || sneak || inwater || flying || !solid)
             {
+                // **TODO** If in water & encumbrance too high ==> sink
                 vec.z() = 0.f;
                 // Following code might assign some vertical movement regardless, need to reset this manually
                 // This is used for jumping detection
