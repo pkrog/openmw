@@ -499,7 +499,7 @@ namespace MWWorld
         const float normalizedEncumbrance = getNormalizedEncumbrance(ptr);
 //        const GMST& gmst = getGmst();
 //        value *= 1.0f - gmst.fEncumberedMoveEffect->mValue.getFloat() * normalizedEncumbrance;
-        return 1.5f / exp(normalizedEncumbrance);
+        return 1.5f / exp(normalizedEncumbrance / 2);
     }
 
     ESM::RefId Class::getSound(const MWWorld::ConstPtr&) const

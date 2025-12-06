@@ -2158,7 +2158,7 @@ namespace MWMechanics
                     static const float fFatigueSneakBase = gmst.find("fFatigueSneakBase")->mValue.getFloat();
                     static const float fFatigueSneakMult = gmst.find("fFatigueSneakMult")->mValue.getFloat();
 
-                    if (cls.getEncumbrance(mPtr) <= cls.getCapacity(mPtr))
+                    //if (cls.getEncumbrance(mPtr) <= cls.getCapacity(mPtr))
                     {
                         const float encumbrance = cls.getNormalizedEncumbrance(mPtr);
                         if (sneak)
@@ -2193,8 +2193,17 @@ namespace MWMechanics
                 //vec.z() = 0.f;
                 // Encumbrance in water
                 if (inwater)
+            if (isPlayer) {
+                std::wcout << "vec.z#-2="<<vec.z()<<std::endl;
+                std::wcout << "getEncumbrance="<<cls.getEncumbrance(mPtr)<<std::endl;
+            }
                     vec.z() = cls.getEncumbrance(mPtr)
                         * (0.2 - cls.getNormalizedEncumbrance(mPtr));
+            if (isPlayer) {                    
+            std::wcout << "cls.getNormalizedEncumbrance="<<cls.getNormalizedEncumbrance(mPtr)<<std::endl;
+            std::wcout << "0.2-cls.getNormalizedEncumbrance="<<0.2-cls.getNormalizedEncumbrance(mPtr)<<std::endl;
+            std::wcout << "vec.z#-1="<<vec.z()<<std::endl;
+            }
                 // Following code might assign some vertical movement regardless, need to reset this manually
                 // This is used for jumping detection
                 movementSettings.mPosition[2] = 0;
@@ -2339,6 +2348,8 @@ namespace MWMechanics
             else
                 mAnimation->setBodyPitchRadians(0);
 
+            if (isPlayer)
+                std::wcout << "vec.z#1="<<vec.z()<<std::endl;
             if (inwater && isPlayer && !isFirstPersonPlayer
                 && Settings::game().mSwimUpwardCorrection && vec.z() >= 0)
             {
@@ -2346,6 +2357,8 @@ namespace MWMechanics
                 vec.z() = std::abs(vec.y()) * swimUpwardCoef;
                 vec.y() *= std::sqrt(1.0f - swimUpwardCoef * swimUpwardCoef);
             }
+            if (isPlayer)
+                std::wcout << "vec.z#2="<<vec.z()<<std::endl;
 
             if (isBiped)
             {
@@ -2445,16 +2458,22 @@ namespace MWMechanics
             }
         }
 
+        if (isPlayer)
+            std::wcout<<"movement.z#2="<<movement.z()<<std::endl;
         osg::Vec3f movementFromAnimation
             = mAnimation->runAnimation(mSkipAnim && !isScriptedAnimPlaying() ? 0.f : duration);
 
         if (mPtr.getClass().isActor() && !isScriptedAnimPlaying())
         {
+            if (isPlayer)
+                std::wcout<<"movement.z#3="<<movement.z()<<std::endl;
             if (isMovementAnimationControlled())
             {
                 if (duration != 0.f && movementFromAnimation != osg::Vec3f())
                 {
                     movementFromAnimation /= duration;
+        if (isPlayer)
+            std::wcout<<"movement.z#4="<<movement.z()<<std::endl;
 
                     // Ensure we're moving in the right general direction.
                     // In vanilla, all horizontal movement is taken from animations, even when moving diagonally (which
@@ -2473,19 +2492,27 @@ namespace MWMechanics
                     }
 
                     movement = movementFromAnimation;
+        if (isPlayer)
+            std::wcout<<"movement.z#6="<<movement.z()<<std::endl;
                 }
                 else
                 {
                     auto z = movement.z();
+        if (isPlayer)
+            std::wcout<<"movement.z#8="<<movement.z()<<std::endl;
                     movement = osg::Vec3f();
                     if (z < 0)
                         movement.z() = z;
+        if (isPlayer)
+            std::wcout<<"movement.z#9="<<movement.z()<<std::endl;
                 }
             }
             else if (mSkipAnim)
             {
                 movement = osg::Vec3f();
             }
+            if (isPlayer)
+                std::wcout<<"movement.z#10="<<movement.z()<<std::endl;
 
             if (mFloatToSurface && world->isSwimming(mPtr))
             {
@@ -2500,10 +2527,25 @@ namespace MWMechanics
                 {
                     movement.z() = 1.0;
                 }
+                if (isPlayer)
+                    std::wcout<<"movement.z#30="<<movement.z()<<std::endl;
             }
+            if (isPlayer)
+                std::wcout<<"movement.z#31="<<movement.z()<<std::endl;
 
             movement.x() *= scale;
             movement.y() *= scale;
+//            if (isPlayer) {
+//                std::wcout<<"movement.z#100="<<movement.z()<<std::endl;
+//                if (movement.z() < 0 && world->isSwimming(mPtr)) {
+//                    movement.y() = -abs(movement.y());
+//                    movement.x() = -abs(movement.x());
+//                }
+//                std::wcout<<"movement.z#101="<<movement.z()
+//                    <<"movement.x="<<movement.x()
+//                    <<"movement.y="<<movement.y()
+//                    <<std::endl;
+//            }
             world->queueMovement(mPtr, movement);
         }
 

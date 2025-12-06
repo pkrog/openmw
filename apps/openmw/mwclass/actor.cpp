@@ -1,5 +1,7 @@
 #include "actor.hpp"
 
+#include <iostream>
+
 #include <components/esm3/loadmgef.hpp>
 
 #include "../mwbase/environment.hpp"
