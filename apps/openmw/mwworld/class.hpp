@@ -231,6 +231,7 @@ namespace MWWorld
 
         virtual float getNormalizedEncumbrance(const MWWorld::Ptr& ptr) const;
         ///< Returns encumbrance re-scaled to capacity
+        float get_enc_penalty_factor(const MWWorld::Ptr& ptr) const;
 
         virtual bool consume(const MWWorld::Ptr& consumable, const MWWorld::Ptr& actor) const;
         ///< Consume an item, e. g. a potion.

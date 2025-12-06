@@ -2003,6 +2003,7 @@ namespace MWMechanics
 
             bool isMoving
                 = (std::abs(movementSettings.mPosition[0]) > .5 || std::abs(movementSettings.mPosition[1]) > .5);
+            bool starting_jump = false;
             if (!inwater && !flying)
             {
                 // Force Jump
@@ -2011,12 +2012,15 @@ namespace MWMechanics
                 // Force Move Jump, only jump if they're otherwise moving
                 if (stats.getMovementFlag(MWMechanics::CreatureStats::Flag_ForceMoveJump) && isMoving)
                     movementSettings.mPosition[2] = onground ? 1.f : 0.f;
+                starting_jump = (movementSettings.mPosition[2] != 0.f);
             }
+            std::wcout << "starting_jump=" << starting_jump << std::endl;
 
             osg::Vec3f rot = cls.getRotationVector(mPtr);
             osg::Vec3f vec(movementSettings.asVec3());
             movementSettings.mSpeedFactor = std::min(vec.length(), 1.f);
             vec.normalize();
+            vec.z() = 0.0f;
 
             const bool smoothMovement = Settings::game().mSmoothMovement;
             if (smoothMovement)
@@ -2181,20 +2185,30 @@ namespace MWMechanics
                 }
             }
 
+            std::wcout << "JUMP 1: " << mInJump << std::endl;
             bool wasInJump = mInJump;
             mInJump = false;
-            const float jumpHeight = cls.getJump(mPtr);
+            const float jumpHeight = cls.getJump(mPtr)
+                * cls.get_enc_penalty_factor(mPtr);
+            std::wcout << "JUMP 1.1: " << mInJump << " jumpHeight=" << jumpHeight << std::endl;
             if (jumpHeight <= 0.f || sneak || inwater || flying || !solid)
             {
-                // **TODO** If in water & encumbrance too high ==> sink
-                vec.z() = 0.f;
+                //vec.z() = 0.f;
+                // Encumbrance in water
+                if (inwater)
+                    vec.z() = cls.getEncumbrance(mPtr)
+                        * (0.2 - cls.getNormalizedEncumbrance(mPtr));
+                std::wcout << "VEC.Z #1 = " << vec.z() << std::endl;
                 // Following code might assign some vertical movement regardless, need to reset this manually
                 // This is used for jumping detection
                 movementSettings.mPosition[2] = 0;
             }
 
+            std::wcout << "inwater=" << inwater << " flying=" << flying << " solid=" << solid << std::endl;
             if (!inwater && !flying && solid)
             {
+                std::wcout << "JUMP 1.2: " << mInJump << " vec.z=" << vec.z() << std::endl;
+                std::wcout << "starting_jump=" << starting_jump << std::endl;
                 // In the air (either getting up —ascending part of jump— or falling).
                 if (!onground)
                 {
@@ -2208,10 +2222,11 @@ namespace MWMechanics
                     factor = std::min(1.f, factor);
                     vec.x() *= factor;
                     vec.y() *= factor;
-                    vec.z() = - cls.getEncumbrance(mPtr) / 3.0f; // Gravity
+                    vec.z() = - cls.getEncumbrance(mPtr); // Gravity
+                    std::wcout << "JUMP 1.5: " << mInJump << std::endl;
                 }
                 // Started a jump.
-                else if (mJumpState != JumpState_InAir && vec.z() > 0.f)
+                else if (starting_jump && mJumpState != JumpState_InAir /*&& vec.z() > 0.f*/)
                 {
                     mInJump = true;
                     if (vec.x() == 0 && vec.y() == 0)
@@ -2220,10 +2235,13 @@ namespace MWMechanics
                     {
                         osg::Vec3f lat(vec.x(), vec.y(), 0.0f);
                         lat.normalize();
-                        vec = osg::Vec3f(lat.x(), lat.y(), 1.0f) * jumpHeight * 0.707f;
+                        vec = osg::Vec3f(lat.x(), lat.y(), 1.0f) * jumpHeight
+                            * 0.707f;
                     }
+                    std::wcout << "JUMP 1.6: " << mInJump << std::endl;
                 }
             }
+            std::wcout << "JUMP 2: " << mInJump << std::endl;
 
             if (!mInJump)
             {
@@ -2282,8 +2300,6 @@ namespace MWMechanics
                 if (mAnimation->isPlaying(mCurrentJump))
                     jumpstate = JumpState_Landing;
 
-                vec.z() = 0.0f;
-
                 if (movementSettings.mIsStrafing)
                 {
                     if (vec.x() > 0.0f)
@@ -2320,6 +2336,7 @@ namespace MWMechanics
                 }
             }
 
+            std::wcout << "VEC.Z #1.8 = " << vec.z() << std::endl;
             if (turnToMovementDirection && !isFirstPersonPlayer && isBiped
                 && (movestate == CharState_SwimRunForward || movestate == CharState_SwimWalkForward
                     || movestate == CharState_SwimRunBack || movestate == CharState_SwimWalkBack))
@@ -2333,12 +2350,15 @@ namespace MWMechanics
             else
                 mAnimation->setBodyPitchRadians(0);
 
-            if (inwater && isPlayer && !isFirstPersonPlayer && Settings::game().mSwimUpwardCorrection)
+            std::wcout << "VEC.Z #1.9 = " << vec.z() << std::endl;
+            if (inwater && isPlayer && !isFirstPersonPlayer
+                && Settings::game().mSwimUpwardCorrection && vec.z() >= 0)
             {
                 const float swimUpwardCoef = Settings::game().mSwimUpwardCoef;
                 vec.z() = std::abs(vec.y()) * swimUpwardCoef;
                 vec.y() *= std::sqrt(1.0f - swimUpwardCoef * swimUpwardCoef);
             }
+            std::wcout << "VEC.Z #2 = " << vec.z() << std::endl;
 
             if (isBiped)
             {
@@ -2417,14 +2437,17 @@ namespace MWMechanics
                 updateHeadTracking(duration);
             }
 
+            std::wcout << "VEC.Z #3 = " << vec.z() << std::endl;
             movement = vec;
             movementSettings.mPosition[0] = movementSettings.mPosition[1] = 0;
+            std::wcout << "movement.z #1 = " << movement.z() << std::endl;
 
             // Can't reset jump state (mPosition[2]) here in full; we don't know for sure whether the PhysicsSystem will
             // actually handle it in this frame due to the fixed minimum timestep used for the physics update. It will
             // be reset in PhysicsSystem::move once the jump is handled.
             if (movement.z() == 0.f)
                 movementSettings.mPosition[2] = 0;
+            std::wcout << "movement.z #2 = " << movement.z() << std::endl;
         }
         else if (cls.getCreatureStats(mPtr).isDead())
         {
@@ -2448,6 +2471,7 @@ namespace MWMechanics
                 if (duration != 0.f && movementFromAnimation != osg::Vec3f())
                 {
                     movementFromAnimation /= duration;
+                    std::wcout << "movement.z #3.1 = " << movement.z() << std::endl;
 
                     // Ensure we're moving in the right general direction.
                     // In vanilla, all horizontal movement is taken from animations, even when moving diagonally (which
@@ -2464,21 +2488,32 @@ namespace MWMechanics
                         float diff = targetMovementAngle - animMovementAngle;
                         movementFromAnimation = osg::Quat(diff, osg::Vec3f(0, 0, 1)) * movementFromAnimation;
                     }
+                    std::wcout << "movement.z #3.2 = " << movement.z() << std::endl;
 
                     movement = movementFromAnimation;
+                    std::wcout << "movement.z #3.3 = " << movement.z() << std::endl;
                 }
                 else
                 {
+                    std::wcout << "movement.z #3.4 = " << movement.z() << std::endl;
+                    auto z = movement.z();
                     movement = osg::Vec3f();
+                    if (z < 0)
+                        movement.z() = z;
+                    std::wcout << "movement.z #3.5 = " << movement.z() << std::endl;
                 }
             }
             else if (mSkipAnim)
             {
+                std::wcout << "movement.z #3.6 = " << movement.z() << std::endl;
                 movement = osg::Vec3f();
+                std::wcout << "movement.z #3.7 = " << movement.z() << std::endl;
             }
+            std::wcout << "movement.z #4 = " << movement.z() << std::endl;
 
             if (mFloatToSurface && world->isSwimming(mPtr))
             {
+                // Dead or paralyzed
                 if (cls.getCreatureStats(mPtr).isDead()
                     || (!godmode
                         && cls.getCreatureStats(mPtr)
@@ -2490,9 +2525,11 @@ namespace MWMechanics
                     movement.z() = 1.0;
                 }
             }
+            std::wcout << "movement.z #5 = " << movement.z() << std::endl;
 
             movement.x() *= scale;
             movement.y() *= scale;
+            std::wcout << "movement.z #LAST = " << movement.z() << std::endl;
             world->queueMovement(mPtr, movement);
         }
 

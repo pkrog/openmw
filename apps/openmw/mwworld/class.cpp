@@ -495,6 +495,13 @@ namespace MWWorld
         return encumbrance / capacity;
     }
 
+    float Class::get_enc_penalty_factor(const Ptr& ptr) const {
+        const float normalizedEncumbrance = getNormalizedEncumbrance(ptr);
+//        const GMST& gmst = getGmst();
+//        value *= 1.0f - gmst.fEncumberedMoveEffect->mValue.getFloat() * normalizedEncumbrance;
+        return 1.5f / exp(normalizedEncumbrance);
+    }
+
     ESM::RefId Class::getSound(const MWWorld::ConstPtr&) const
     {
         return ESM::RefId();
